@@ -1,13 +1,16 @@
-(defproject jtk-dvlp/lein-tpl-helper "1.0.0-SNAPSHOT"
+(defproject net.clojars.jtkdvlp/lein-tpl-helpers "1.0.0-SNAPSHOT"
   :description
-  "FIXME: write description"
+  "Helpers to work / create leiningen templates"
 
   :url
-  "https://github.com//"
+  "https://github.com/jtkDvlp/lein-tpl-helpers"
 
   :license
   {:name "Eclipse Public License"
    :url  "http://www.eclipse.org/legal/epl-v10.html"}
+
+  :eval-in-leiningen
+  true
 
   :dependencies
   []
@@ -25,17 +28,18 @@
   :deploy-repositories
   [["releases" :clojars]]
 
-  :aliases
-  {"update-readme-version"
-   ["shell" "sed" "-i" "s/\\\\[jtk-dvlp/lein-tpl-helper \"[0-9.]*\"\\\\]/[jtk-dvlp/lein-tpl-helper \"${:version}\"]/" "README.md"]}
+  ;; :aliases
+  ;; {"update-readme-version"
+  ;;  ["shell" "sed" "-i" "s/\\\\[jtk-dvlp/lein-tpl-helpers \"[0-9.]*\"\\\\]/[jtk-dvlp/lein-tpl-helpers \"${:version}\"]/" "README.md"]}
 
-  :release-tasks
-  [["shell" "git" "diff" "--exit-code"]
-   ["change" "version" "leiningen.release/bump-version"]
-   ["change" "version" "leiningen.release/bump-version" "release"]
-   ["changelog" "release"]
-   ["update-readme-version"]
-   ["vcs" "commit"]
-   ["vcs" "tag"]
-   ["deploy"]
-   ["vcs" "push"]])
+  ;; :release-tasks
+  ;; [["shell" "git" "diff" "--exit-code"]
+  ;;  ["change" "version" "leiningen.release/bump-version"]
+  ;;  ["change" "version" "leiningen.release/bump-version" "release"]
+  ;;  ["changelog" "release"]
+  ;;  ["update-readme-version"]
+  ;;  ["vcs" "commit"]
+  ;;  ["vcs" "tag"]
+  ;;  ["deploy"]
+  ;;  ["vcs" "push"]]
+  )

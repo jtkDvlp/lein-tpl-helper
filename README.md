@@ -1,15 +1,11 @@
-# lein-tpl-helper
-[![Clojars Project](https://img.shields.io/clojars/v/lein-tpl-helper.svg)](https://clojars.org/lein-tpl-helper)
+[![Clojars Project](https://img.shields.io/clojars/v/jtk-dvlp/lein-tpl-helpers.svg)](https://clojars.org/jtk-dvlp/lein-tpl-helpers)
+[![cljdoc badge](https://cljdoc.org/badge/jtk-dvlp/lein-tpl-helpers)](https://cljdoc.org/d/jtk-dvlp/lein-tpl-helpers/CURRENT)
+[![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-2.0)
 
-A Clojure library designed to ... well, that part is up to you.
 
-```clj
-[jtk-dvlp/lein-tpl-helper "1.0.0-SNAPSHOT"]
-```
+# Helpers to work / create leiningen templates
 
-## Usage
-
-FIXME
+WILL FOLLOW
 
 ## License
 
