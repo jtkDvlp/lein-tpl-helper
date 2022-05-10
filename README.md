@@ -1,5 +1,5 @@
-[![Clojars Project](https://img.shields.io/clojars/v/jtk-dvlp/lein-tpl-helpers.svg)](https://clojars.org/jtk-dvlp/lein-tpl-helpers)
-[![cljdoc badge](https://cljdoc.org/badge/jtk-dvlp/lein-tpl-helpers)](https://cljdoc.org/d/jtk-dvlp/lein-tpl-helpers/CURRENT)
+[![Clojars Project](https://img.shields.io/clojars/v/net.clojars.jtkdvlp/lein-tpl-helpers.svg)](https://clojars.org/net.clojars.jtkdvlp/lein-tpl-helpers)
+[![cljdoc badge](https://cljdoc.org/badge/net.clojars.jtkdvlp/lein-tpl-helpers)](https://cljdoc.org/d/net.clojars.jtkdvlp/lein-tpl-helpers/CURRENT)
 [![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-2.0)
 
 
