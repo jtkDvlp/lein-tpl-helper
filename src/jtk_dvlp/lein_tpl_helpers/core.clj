@@ -53,21 +53,21 @@
       (io/file)
       (file-seq)))
 
-(defn- file-ext?
+(defn- matches-file-ext?
   [ext file]
   (str/ends-with? (.getName file) ext))
 
 (def ^:private clojure-file?
-  (partial file-ext? ".clj"))
+  (partial matches-file-ext? ".clj"))
 
 (def ^:private clojurescript-file?
-  (partial file-ext? ".cljs"))
+  (partial matches-file-ext? ".cljs"))
 
 (def ^:private clojure-common-file?
-  (partial file-ext? ".cljc"))
+  (partial matches-file-ext? ".cljc"))
 
 (def ^:private edn-file?
-  (partial file-ext? ".edn"))
+  (partial matches-file-ext? ".edn"))
 
 (def ^:private edn-like-file?
   (some-fn edn-file? clojure-file? clojurescript-file? clojure-common-file?))
@@ -88,18 +88,18 @@
 
 (defn- generate-file!
   [raw-file data]
-  (let [rendered-file
+  (let [rendered-filepath
         (-> raw-file (.getPath) (lein-tpl/render-text data) (io/file))
 
-        absolute-file
-        (io/file *project-dir* rendered-file)]
+        absolute-filepath
+        (io/file *project-dir* rendered-filepath)]
 
-    (debug (format "Generating file \"%s\"" rendered-file))
-    (.mkdirs (.getParentFile absolute-file))
+    (debug (format "Generating file \"%s\"" rendered-filepath))
+    (.mkdirs (.getParentFile absolute-filepath))
 
     (-> raw-file
         (render data)
-        (io/copy absolute-file))))
+        (io/copy absolute-filepath))))
 
 (defn- generate-dir!
   [dir data]
@@ -183,10 +183,10 @@
 (defn project-data
   [name opts]
   (let [customer
-        (or (lein-tpl/group-name name) "TODO")
+        (lein-tpl/group-name name)
 
         project
-        (or (lein-tpl/project-name name) "TODO")
+        (lein-tpl/project-name name)
 
         options
         (reduce
@@ -195,14 +195,13 @@
          {} opts)]
 
     (merge
-     {:name name
-
-      :product (str customer "-" project)
+     {:product-name name
+      :product-title (str (when customer (str customer "-")) project)
       :product-ns (lein-tpl/sanitize-ns name)
       :product-path (lein-tpl/name-to-path name)
 
-      :customer customer
-      :customer-path (lein-tpl/name-to-path customer)
+      :customer (or customer "TODO")
+      :customer-path (lein-tpl/name-to-path (or customer "TODO"))
 
       :project project
       :project-path (lein-tpl/name-to-path project)}
@@ -210,8 +209,22 @@
      options)))
 
 (defn project-dir
-  [{:keys [product] :as _data-map}]
+  [{:keys [product-title] :as _data-map}]
   (or lein-tpl/*dir*
       (-> (System/getProperty "leiningen.original.pwd")
-          (io/file product)
+          (io/file product-title)
           (.getPath))))
+
+(defn generate!
+  [feature-files name features]
+  (let [template-data (project-data name features)]
+    (binding [*template-dir*
+              (io/file "leiningen/new/project")
+
+              *project-dir*
+              (io/file (project-dir template-data))]
+
+      (info "Generating fresh project")
+      (->dir "." (excludes feature-files features) template-data)
+
+      )))
