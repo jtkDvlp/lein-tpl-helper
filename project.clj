@@ -13,7 +13,7 @@
   true
 
   :dependencies
-  []
+  [[org.clojure/java.classpath "1.0.0"]]
 
   :plugins
   [[lein-shell "0.5.0"]

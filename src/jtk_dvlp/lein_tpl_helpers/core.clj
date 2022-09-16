@@ -3,6 +3,7 @@
    [clojure.set :refer [difference]]
    [clojure.string :as str]
    [clojure.java.io :as io]
+   [clojure.java.classpath :as cp]
 
    [leiningen.core.main :refer [abort warn info debug]]
    [leiningen.new.templates :as lein-tpl]
@@ -10,7 +11,11 @@
    [stencil.core :as stencil]
    [stencil.parser :as stencil-parser]
 
-   ,,,))
+   ,,,)
+
+  (:import
+   [java.io File]
+   [java.util.jar JarFile JarEntry]))
 
 
 (def ^:dynamic *template-dir* nil)
@@ -41,8 +46,6 @@
 (defn- template-relativize
   [file]
   (-> *template-dir*
-      (.getPath)
-      (io/resource)
       (relativize file)))
 
 (defn- matches-file?
@@ -66,9 +69,6 @@
   [path]
   (->> path
        (io/file *template-dir*)
-       (.getPath)
-       (io/resource)
-       (io/file)
        (file-seq)
        (remove #(matches-ext? % ignorable-extensions))))
 
@@ -80,8 +80,6 @@
           (assoc :tag-open "<%", :tag-close "%>"))]
 
     (-> (io/file *template-dir* template-src)
-        (.getPath)
-        (io/resource)
         (lein-tpl/slurp-resource)
         (stencil-parser/parse parser-options)
         (stencil/render data-map))))
@@ -177,19 +175,76 @@
 
 (defn project-dir
   [{:keys [product-title] :as _data-map}]
-  (or lein-tpl/*dir*
-      (-> (System/getProperty "leiningen.original.pwd")
-          (io/file product-title)
-          (.getPath))))
+  (io/file
+   (or lein-tpl/*dir*
+       (-> (System/getProperty "leiningen.original.pwd")
+           (io/file product-title)
+           (.getPath)))))
+
+(def ^:private pwd
+  (-> "."
+      (io/file)
+      (.getCanonicalFile)))
+
+(defn- copy-fs-file
+  [target-dir file]
+  (let [out-file (io/file target-dir file)]
+    (.mkdirs (.getParentFile out-file))
+    (with-open [in (io/input-stream file)
+                out (io/output-stream out-file)]
+      (io/copy in out)))
+  nil)
+
+(defn- copy-jar-entry
+  [target-dir jar entry]
+  (let [out-file (io/file target-dir (.getName entry))]
+    (.mkdirs (.getParentFile out-file))
+    (with-open [in (.getInputStream jar entry)
+                out (io/output-stream out-file)]
+      (io/copy in out)))
+  nil)
+
+(defn- extract-resources
+  [pred target]
+  (->> (cp/classpath-directories)
+       (mapcat file-seq)
+       (map #(.getCanonicalFile %))
+       (filter #(.isFile %))
+       (map (partial relativize pwd))
+       (filter (comp pred #(.getPath %)))
+       (run! (partial copy-fs-file target)))
+
+  (run!
+   (fn [^JarFile file]
+     (->> file
+          (.entries)
+          (enumeration-seq)
+          (remove #(.isDirectory %))
+          (filter (comp pred #(.getName %)))
+          (run! (partial copy-jar-entry target file ))))
+   (cp/classpath-jarfiles))
+  nil)
+
+(defn- temp-dir
+  [prefix suffix]
+  (let [dir (File/createTempFile prefix suffix)]
+    (.delete dir)
+    dir))
+
+(defn- template-dir
+  [path]
+  (let [tmp-dir (temp-dir "tpl-resources_" "")]
+    (extract-resources #(str/starts-with? % path) tmp-dir)
+    (io/file tmp-dir path)))
 
 (defn generate-project!
   [feature-files name features]
   (let [template-data (project-data name features)]
     (binding [*template-dir*
-              (io/file "leiningen/new/project")
+              (template-dir "leiningen/new/project")
 
               *project-dir*
-              (io/file (project-dir template-data))]
+              (project-dir template-data)]
 
       (info "Generating fresh project")
       (generate-structure! "." (excludes feature-files features) template-data))))
