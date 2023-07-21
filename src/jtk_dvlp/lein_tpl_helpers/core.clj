@@ -4,6 +4,7 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [clojure.java.classpath :as cp]
+   [clojure.pprint :as pprint]
 
    [leiningen.core.main :refer [abort warn info debug]]
    [leiningen.new.templates :as lein-tpl]
@@ -20,6 +21,11 @@
 
 (def ^:dynamic *template-dir* nil)
 (def ^:dynamic *project-dir* nil)
+
+(defn- ppstr [x]
+  (str "\n"
+       (with-out-str
+         (pprint/pprint x))))
 
 (defn- relativize
   [dir file]
@@ -142,12 +148,13 @@
 
     (->> files-to-include
          (difference all-files)
+         (map io/file)
          (mapcat expand-directory)
          (into #{}))))
 
 (defn project-data
   [name opts]
-  (let [customer
+  (let [group
         (lein-tpl/group-name name)
 
         project
@@ -160,13 +167,13 @@
          {} opts)]
 
     (merge
-     {:product-name name
-      :product-title (str (when customer (str customer "-")) project)
+     {:product (str (when group (str (str/replace group "." "-") "-")) project)
+      :product-uri name
       :product-ns (lein-tpl/sanitize-ns name)
       :product-path (lein-tpl/name-to-path name)
 
-      :customer (or customer "TODO")
-      :customer-path (lein-tpl/name-to-path (or customer "TODO"))
+      :group (or group "TODO")
+      :group-path (lein-tpl/name-to-path (or group "TODO"))
 
       :project project
       :project-path (lein-tpl/name-to-path project)}
@@ -174,11 +181,11 @@
      options)))
 
 (defn project-dir
-  [{:keys [product-title] :as _data-map}]
+  [{:keys [product] :as _data-map}]
   (io/file
    (or lein-tpl/*dir*
        (-> (System/getProperty "leiningen.original.pwd")
-           (io/file product-title)
+           (io/file product)
            (.getPath)))))
 
 (def ^:private pwd
@@ -187,10 +194,11 @@
       (.getCanonicalFile)))
 
 (defn- copy-fs-file
-  [target-dir file]
-  (let [out-file (io/file target-dir file)]
+  [target-dir source-dir file]
+  (let [in-file (io/file source-dir file)
+        out-file (io/file target-dir file)]
     (.mkdirs (.getParentFile out-file))
-    (with-open [in (io/input-stream file)
+    (with-open [in (io/input-stream in-file)
                 out (io/output-stream out-file)]
       (io/copy in out)))
   nil)
@@ -206,22 +214,27 @@
 
 (defn- extract-resources
   [pred target]
-  (->> (cp/classpath-directories)
-       (mapcat file-seq)
-       (map #(.getCanonicalFile %))
-       (filter #(.isFile %))
-       (map (partial relativize pwd))
-       (filter (comp pred #(.getPath %)))
-       (run! (partial copy-fs-file target)))
+  ;; NOTE: für die Entwicklung vom FS
+  (let [resource-dir (io/file "resources")
+        source-dir (io/file pwd "resources")]
+    (->> resource-dir
+         (file-seq)
+         (map #(.getCanonicalFile %))
+         (remove #(.isDirectory %))
+         (map (partial relativize source-dir))
+         (filter (comp pred #(.getPath %)))
+         (run! (partial copy-fs-file target source-dir))))
 
+  ;; NOTE: für die Nutzung ausm JAR
+  ;; TODO: kenne wir nicht eigentlich genau das JAR?
   (run!
-   (fn [^JarFile file]
-     (->> file
+   (fn [^JarFile jar]
+     (->> jar
           (.entries)
           (enumeration-seq)
           (remove #(.isDirectory %))
           (filter (comp pred #(.getName %)))
-          (run! (partial copy-jar-entry target file ))))
+          (run! (partial copy-jar-entry target jar))))
    (cp/classpath-jarfiles))
   nil)
 
@@ -239,7 +252,12 @@
 
 (defn generate-project!
   [feature-files name features]
-  (let [template-data (project-data name features)]
+  (let [template-data
+        (project-data name features)
+
+        excludes
+        (excludes feature-files features)]
+
     (binding [*template-dir*
               (template-dir "leiningen/new/project")
 
@@ -247,7 +265,16 @@
               (project-dir template-data)]
 
       (info "Generating fresh project")
-      (generate-structure! "." (excludes feature-files features) template-data))))
+      (debug "Generating fresh project:"
+             (ppstr {:name name
+                     :feature-files feature-files
+                     :features features
+                     :excludes excludes
+                     :template-data template-data
+                     :*template-dir* *template-dir*
+                     :*project-dir* *project-dir*}))
+
+      (generate-structure! "." excludes template-data))))
 
 (defn- stream-to-fn
   [fun stream]
