@@ -303,8 +303,14 @@
 
     (.waitFor process)))
 
+(defn check-dependencies!
+  []
+  (info "Checking template dependencies.")
+  (when-not (= 0 (exec! "lein" "ancient" "check" ":all"))
+    (abort "Checking dependencies failed")))
+
 (defn upgrade-dependencies!
   []
   (info "Upgrading template dependencies and running tests.")
-  (when-not (= 0 (exec! "lein" "ancient" "upgrade" ":check-clojure"))
+  (when-not (= 0 (exec! "lein" "ancient" "upgrade" ":all"))
     (abort "Upgrading dependencies failed")))
