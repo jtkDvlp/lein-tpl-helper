@@ -127,6 +127,7 @@
 
 (defn- expand-directory
   [file-or-dir]
+  (debug "Expand directory" file-or-dir)
   (if (.isDirectory file-or-dir)
     (file-seq file-or-dir)
     [file-or-dir]))
